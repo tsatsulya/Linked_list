@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -7,6 +9,7 @@ typedef enum {
     OK = 0,
     INVALID_ELEM_ID,
     RUN_OUT_OF_MEMORY,
+    NOTHING_TO_DELETE,
 } status_t;
 typedef struct {
     int ind_of_prev_element;
@@ -28,8 +31,15 @@ status_t attach_next_by_id(List* list, int id, list_data_type data);
 status_t attach_prev_by_id(List* list, int id, list_data_type data);
 status_t attach_to_data_tail(List* list, list_data_type data);
 status_t delete_element_by_id(List* list, int id);
+void list_linearization(List* list);
+
+
+void swap_elements(List* list, int first_index, int second_index); // delete from .h
+
+
 void print_data_by_id(List* list, int id);
 void print_list_data(List* list);
-
+void print_array_data(List* list);
+void print_free_indexes(List* list);
 
 

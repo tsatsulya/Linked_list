@@ -7,15 +7,23 @@ int main() {
     attach_to_data_tail(&list, 6);
     attach_to_data_tail(&list, 7);
 
-    print_list_data(&list);
+    print_array_data(&list);
 
-    attach_next_by_id(&list, 1, 10);
+    print_list_data(&list);
+    print_free_indexes(&list);
+
+    swap_elements(&list, 5, 6);
+
+    print_free_indexes(&list);
+
+    print_array_data(&list);
 
     print_list_data(&list);
     
-    attach_prev_by_id(&list, 3, 20);
 
-    print_list_data(&list);
+
+
+    // list_linearization(&list);
 
     return 0;
 }
