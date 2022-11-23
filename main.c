@@ -3,27 +3,18 @@
 int main() {
 
     List list = list_create(10);
-    attach_to_data_tail(&list, 5);
-    attach_to_data_tail(&list, 6);
-    attach_to_data_tail(&list, 7);
+    add_to_tail(&list, 5);
+    add_to_tail(&list, 6);
+    add_to_tail(&list, 7);
+    add_to_tail(&list, 8);
+    add_to_tail(&list, 9);
+    add_to_tail(&list, 10);
 
-    print_array_data(&list);
-
-    print_list_data(&list);
-    print_free_indexes(&list);
-
-    swap_elements(&list, 5, 6);
-
-    print_free_indexes(&list);
-
-    print_array_data(&list);
-
-    print_list_data(&list);
-    
-
-
-
-    // list_linearization(&list);
+    delete_element_by_id(&list, 2);
+    // list_linearize(&list);
+    attach_next_by_id(&list, 1, 2);
+    print_full_information(&list);
+    list_vis(&list);
 
     return 0;
 }

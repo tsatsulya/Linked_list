@@ -1,0 +1,5 @@
+digraph G {
+    struct0 [label="{a|<here> b}"];
+    struct1 [label="{b|<here> b}"];
+struct0 -> struct1;
+}
