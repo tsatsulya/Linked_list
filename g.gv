@@ -1,5 +1,41 @@
-digraph G {
-    struct0 [label="{a|<here> b}"];
-    struct1 [label="{b|<here> b}"];
-struct0 -> struct1;
+digraph structs {
+	subgraph {
+		nodesep = 0.5;
+		node [ shape = box, weight = 100 ];
+		edge [ style = invis, dir=both, arrowsize = 0.5 ];
+
+		struct0 [label="0|0", style=filled, fillcolor="#f2cfc7"];
+		struct1 [label="1|5"];
+		struct2 [label="2|57005"];
+		struct3 [label="3|57005"];
+		struct4 [label="4|8"];
+		struct5 [label="5|9"];
+		struct6 [label="6|10"];
+		struct7 [label="7|57005"];
+		struct8 [label="8|57005"];
+		struct9 [label="9|57005"];
+		struct10 [label="10|57005"];
+
+
+		{rank = same; struct0; struct1; struct2; struct3; struct4; struct5; struct6; struct7; struct8; struct9; struct10; }
+		struct0 -> struct1 -> struct2 -> struct3 -> struct4 -> struct5 -> struct6 -> struct7 -> struct8 -> struct9 -> struct10
+
+	}
+
+	subgraph {
+		node [arrowtail=dot]
+		struct0 -> struct1 [dir=both, arrowsize=0.5]
+		struct1 -> struct4 [dir=both, arrowsize=0.5]
+		struct4 -> struct5 [dir=both, arrowsize=0.5]
+		struct5 -> struct6 [dir=both, arrowsize=0.5]
+		struct6 -> struct0 [dir=both, arrowsize=0.5]
+		struct2 -> struct3 [dir=both, arrowsize=0.5]
+		struct2 -> struct7 [dir=both, arrowsize=0.5]
+		struct7 -> struct8 [dir=both, arrowsize=0.5]
+		struct8 -> struct9 [dir=both, arrowsize=0.5]
+		struct9 -> struct10 [dir=both, arrowsize=0.5]
+		struct10 -> struct3 [dir=both, arrowsize=0.5]
+
+	}
+
 }

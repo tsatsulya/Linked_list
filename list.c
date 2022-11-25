@@ -10,6 +10,10 @@ static const int ind_of_data_head = 0;
         return TO_RET;                                          \
     }
 
+static bool is_bad_ptr(void* ptr) {
+    if ((long int)ptr < 0x0000ffff) return true;
+    return false;
+}
 
 static int get_index_by_id(List* list, int id) {
 
@@ -26,14 +30,14 @@ static int get_index_by_id(List* list, int id) {
 static const int dead_value = 0xdead;
 
 
-List list_create(int capacity) {
+status_t list_create(List* list, int capacity) {
 
     capacity++;
 
     List_element* buffer = (List_element*)calloc(capacity, sizeof(List_element));
-    // TODO: status?
+    ERROR_(is_bad_ptr(buffer), ALLOCATION_ERROR);
     
-    List list = (List) {
+    List new_list = (List) {
         .capacity = capacity,
         .size = 0,
         .buffer = buffer,
@@ -43,24 +47,27 @@ List list_create(int capacity) {
 
     for (int i = 1; i < capacity; i++) {
 
-        list.buffer[i].next = i + 1;
-        list.buffer[i].prev = i - 1;
+        new_list.buffer[i].next = i + 1;
+        new_list.buffer[i].prev = i - 1;
 
         if (i == 1) {
-            list.buffer[i].prev = capacity - 1;
+            new_list.buffer[i].prev = capacity - 1;
         }
 
         if (i == capacity - 1) {
-            list.buffer[i].next = 1;
+            new_list.buffer[i].next = 1;
         }
-        list.buffer[i].data = dead_value; // TODO: ?
+        new_list.buffer[i].is_full = false;
+        new_list.buffer[i].data = dead_value; 
     }
 
 
-    list.buffer[0].prev = 0;
-    list.buffer[0].next = 0;
+    new_list.buffer[0].prev = 0;
+    new_list.buffer[0].next = 0;
 
-    return list;
+    *list = new_list;
+
+    return OK;
 }
 
 
@@ -68,9 +75,6 @@ List list_create(int capacity) {
 
 
 static int cut_element_by_index(List* list, int ind_of_element) { 
-
-    // TODO: char (*buffer)[] = list->buffer; Maybe you can?
-    // get_el_by_ind(list, ind_of_element)->
 
     int ind_before_element = buffer[ind_of_element].prev;
     int ind_after_element = buffer[ind_of_element].next;
@@ -81,14 +85,9 @@ static int cut_element_by_index(List* list, int ind_of_element) {
     return ind_after_element;
 }
 
-typedef enum {
-    free_data, 
-    full_data
-} data_t; // TODO: sushinostey naplodilos'
-
 
 static void insert_between_elements(List* list, int ind_of_element, int ind_of_left_element, 
-                                        int ind_of_right_element, list_data_type data, data_t data_type) {
+                                        int ind_of_right_element, list_data_type data) {
 
     buffer[ind_of_left_element].next = ind_of_element;
     buffer[ind_of_element].prev = ind_of_left_element;
@@ -98,35 +97,33 @@ static void insert_between_elements(List* list, int ind_of_element, int ind_of_l
 
     buffer[ind_of_element].data = data;
 
-    if (data_type == full_data) list->size++; // TODO: should this change size?
+    if (buffer[ind_of_element].is_full) list->size++; 
 }
 
-#define attach_verify() do {                                    \
-    ERROR_(id > list->size, INVALID_ELEM_ID);                   \
-    ERROR_(list->size == list->capacity, RUN_OUT_OF_MEMORY);    \
-} while (0)
+
 
 
 static const int next = 1; 
-static const int prev = -1 
+static const int prev = -1;
 
-static status_t add_element_by_id_in_direction(List* list, int id, list_data_type data, int direction) {
+static status_t add_element_by_index_in_direction(List* list, int ind_of_current_element, list_data_type data, int direction) {
 
-    attach_verify();
+    ERROR_(list->size == list->capacity, RUN_OUT_OF_MEMORY); 
 
     int new_element_index = list->head_of_free_elements_index; 
     list->head_of_free_elements_index = cut_element_by_index(list, list->head_of_free_elements_index);
 
-    int ind_of_current_element = get_index_by_id(list, id);  
-
+    buffer[ind_of_current_element].is_full = true;
     if (direction == next) {
         int ind_after_current_element = buffer[ind_of_current_element].next;     
-        insert_between_elements(list, new_element_index, ind_of_current_element, ind_after_current_element, data, full_data);      
+        insert_between_elements(list, new_element_index, ind_of_current_element, ind_after_current_element, data);      
     }
     if (direction == prev) {
         int ind_before_current_element = buffer[ind_of_current_element].prev;                      
-        insert_between_elements(list, new_element_index, ind_before_current_element, ind_of_current_element, data, full_data);      
+        insert_between_elements(list, new_element_index, ind_before_current_element, ind_of_current_element, data);      
     }
+
+    list->is_sorted = false;
 
     return OK;
 }
@@ -134,13 +131,31 @@ static status_t add_element_by_id_in_direction(List* list, int id, list_data_typ
 
 status_t add_next_by_id(List* list, int id, list_data_type data) {
 
-    return add_element_by_id_in_direction(list, id, data, next);
+    ERROR_(id > list->size, INVALID_ELEM_ID); 
+    
+    return add_element_by_index_in_direction(list, get_index_by_id(list, id), data, next);
 }
 
 status_t add_prev_by_id(List* list, int id, list_data_type data) {
 
-    return add_element_by_id_in_direction(list, id, data, prev);
+    ERROR_(id > list->size, INVALID_ELEM_ID); 
+
+    return add_element_by_index_in_direction(list, get_index_by_id(list, id), data, prev);
 }
+
+
+
+
+status_t add_next_by_index(List* list, int index, list_data_type data) {
+
+    return add_element_by_index_in_direction(list, index, data, next);
+}
+
+status_t add_prev_by_index(List* list, int index, list_data_type data) {
+
+    return add_element_by_index_in_direction(list, index, data, prev);
+}
+
 
 
 status_t add_to_tail(List* list, list_data_type data) {
@@ -152,34 +167,44 @@ status_t add_to_tail(List* list, list_data_type data) {
 
     list->head_of_free_elements_index = cut_element_by_index(list, list->head_of_free_elements_index);
 
-    insert_between_elements(list, new_element_index, ind_of_data_tail, ind_of_data_head, data, full_data);    
+    buffer[new_element_index].is_full = true;
+    insert_between_elements(list, new_element_index, ind_of_data_tail, ind_of_data_head, data); 
+
+    list->is_sorted = false;
 
     return OK;
 }  
 
 
 
-status_t delete_element_by_id(List* list, int id) {
+status_t delete_element_by_index(List* list, int ind_of_element) {
 
     ERROR_(list->size == 0, NOTHING_TO_DELETE);
-    ERROR_(list->size < id, INVALID_ELEM_ID); 
 
 
     list->size--;
 
-    int ind_of_element = get_index_by_id(list, id);
     int tail_of_free_elements = buffer[list->head_of_free_elements_index].prev;
 
 
     cut_element_by_index(list, ind_of_element); 
 
-    insert_between_elements(list, ind_of_element, tail_of_free_elements, list->head_of_free_elements_index, dead_value, free_data);
+    buffer[ind_of_element].is_full = false;
+
+    insert_between_elements(list, ind_of_element, tail_of_free_elements, list->head_of_free_elements_index, dead_value);
 
     list->head_of_free_elements_index = ind_of_element;
+    list->is_sorted = false;
 
     return OK;
 }
 
+status_t delete_element_by_id(List* list, int id) {
+    
+    ERROR_(list->size < id, INVALID_ELEM_ID); 
+
+    return delete_element_by_index(list, get_index_by_id(list, id));
+}
 
 
 static void swap_values(int* first_value, int* second_value) {
@@ -195,7 +220,7 @@ static int my_abs(int value) {
 static void swap_elements(List* list, int first_index, int second_index) {
     
     bool is_beside = (my_abs(first_index - second_index) == 1);
-    bool is_diff = (buffer[first_index].data == dead_value) ^ (buffer[second_index].data == dead_value);
+    bool is_diff = (buffer[first_index].is_full) ^ (buffer[second_index].is_full);
 
     List_element first_element = buffer[first_index];
     List_element second_element = buffer[second_index];
@@ -246,10 +271,8 @@ void list_linearize(List* list) {
         }
     }
 
-    // list->is_sorted = true; // TODO: ??? (make this useful, pleeeasseeeeeee)
+    list->is_sorted = true;
 }
-
-
 
 void print_data_by_id(List* list, int id) {
 
@@ -274,7 +297,6 @@ void print_array_data(List* list) {
 }
 
 void print_full_information(List* list) {
-    
 
     print_array_data(list);
     print_list_data(list);
@@ -289,30 +311,55 @@ void print_full_information(List* list) {
 }
 
 
+#define fputs(x) fputs(x, visualization)
+void print_graph_parameters(FILE* visualization) {
+
+    fputs("digraph structs {\n");
+    fputs("\tsubgraph {\n");
+    fputs("\t\tnodesep = 0.5;\n");
+    fputs("\t\tnode [ shape = box, weight = 100 ];\n");
+	fputs("\t\tedge [ style = invis, dir=both, arrowsize = 0.5 ];\n\n");
+}
+
+
 void list_vis(List* list) {
 
     FILE* visualization = fopen("r.gv", "w");
-    fputs("digraph structs {\n", visualization);
-    fputs("\tnode [ shape=Mrecord ]\n", visualization);
-
-    fputs("\t\trankdir=LR\n", visualization);
-    fputs("\t\tsplines = true;\n", visualization);
-
-    fprintf(visualization, "\tstruct%d [label=\"{%d|<here> %d}\"];\n", 0, 0, 0);
-
     
+    const char color_of_full_element[] = "\"#c1f3a6\"";
+    const char color_of_empty_element[] = "\"#f2d5c7\"";
+
+    print_graph_parameters(visualization);
+    fprintf(visualization, "\t\tstruct%d [label=\"{0|<0>}\", style = filled, fillcolor = %s];\n",  0, "\"#f2f1c7\"");
     
-    for (int i = 0; i < list->capacity; i++) {
-        fprintf(visualization, "\tstruct%d [label=\"{%d|<here> %d}\"];\n", i, i, buffer[i].data);
+    for (int i = 1; i < list->capacity; i++) {
+        fprintf(visualization, "\t\tstruct%d [label=\"%d|%d\", style = filled, fillcolor = %s];\n", 
+                i, i, buffer[i].data, buffer[i].is_full ? color_of_full_element : color_of_empty_element);
     }
 
-
     int index = 0;
+
+    fputs("\n\n");
+    fprintf(visualization, "\t\t{rank = same; ");
+
+    for (int i = 0; i < list->capacity; i++) {
+        fprintf(visualization, "struct%d; ", i);
+    }
+    fputs("}\n");
+
+    fputs("\t\t");
+
+    for (int i = 0; i < list->capacity - 1; i++) {
+        fprintf(visualization, "struct%d -> ", i);
+    }
+    fprintf(visualization, "struct10\n\n");
+    fputs("\t}\n");
+
+    
+
     for (int i = 0; i <= list->size; i++) {
 
-        
-        fprintf(visualization, "struct%d -> struct%d [arrowsize=0.5]\n", index, buffer[index].next);
-        fprintf(visualization, "struct%d -> struct%d [arrowsize=0.5]\n", buffer[index].next, index);
+        fprintf(visualization, "struct%d -> struct%d [dir=both, arrowsize = 0.5]\n", index, buffer[index].next);
         index = buffer[index].next;
 
     }
@@ -320,13 +367,19 @@ void list_vis(List* list) {
     index = list->head_of_free_elements_index;
 
     for (int i = list->size + 1; i < list->capacity; i++) {
-        fprintf(visualization, "struct%d -> struct%d [arrowsize=0.5]\n", index, buffer[index].next);
-        fprintf(visualization, "struct%d -> struct%d [arrowsize=0.5]\n", buffer[index].next, index);
+        fprintf(visualization, "struct%d -> struct%d [dir=both, arrowsize = 0.5]\n", index, buffer[index].next);
 
         index = buffer[index].next;
     }
+
+    
+
    
-    fputs("}", visualization);
+    fputs("}");
+
+
     fclose(visualization);
 }
+#undef fputs
+
 #undef buffer

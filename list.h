@@ -10,11 +10,14 @@ typedef enum {
     INVALID_ELEM_ID,
     RUN_OUT_OF_MEMORY,
     NOTHING_TO_DELETE,
+    ALLOCATION_ERROR,
 } status_t;
 typedef struct { //add type!!
     int prev; 
     int next; 
     list_data_type data;
+    bool is_full;
+    // bool type; // true = full, false = empty
 } List_element;
 
 typedef struct {
@@ -25,13 +28,17 @@ typedef struct {
     bool is_sorted;
 } List;
 
-List list_create(int capacity); // TODO: status_t?
+status_t list_create(List* list, int capacity);
 void list_destruct(List* list);
 
-// TODO: add operations by index
 status_t add_next_by_id(List* list, int id, list_data_type data); 
 status_t add_prev_by_id(List* list, int id, list_data_type data);
 status_t add_to_tail(List* list, list_data_type data); 
+
+status_t add_next_by_index(List* list, int index, list_data_type data);
+status_t add_prev_by_index(List* list, int index, list_data_type data);
+
+status_t delete_element_by_index(List* list, int ind_of_element);
 status_t delete_element_by_id(List* list, int id);
 void list_linearize(List* list);
 
