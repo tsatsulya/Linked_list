@@ -17,7 +17,7 @@ int main() {
     delete_element_by_id(&list, 2);
 
     print_full_information(&list);
-    list_vis(&list);
+    list_visualize(&list);
 
     return 0;
 }

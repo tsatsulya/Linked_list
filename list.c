@@ -30,7 +30,7 @@ static int get_index_by_id(List* list, int id) {
 static const int dead_value = 0xdead;
 
 
-status_t list_create(List* list, int capacity) {
+list_status_t list_create(List* list, int capacity) {
 
     capacity++;
 
@@ -106,10 +106,11 @@ static void insert_between_elements(List* list, int ind_of_element, int ind_of_l
 static const int next = 1; 
 static const int prev = -1;
 
-static status_t add_element_by_index_in_direction(List* list, int ind_of_current_element, list_data_type data, int direction) {
+static list_status_t add_element_by_index_in_direction(List* list, int ind_of_current_element, list_data_type data, int direction) {
 
-    ERROR_(list->size == list->capacity, RUN_OUT_OF_MEMORY); 
-
+    if (list->size == list->capacity) {
+        ERROR_(list_resize(list), REALLOCATION_ERROR);
+    }
     int new_element_index = list->head_of_free_elements_index; 
     list->head_of_free_elements_index = cut_element_by_index(list, list->head_of_free_elements_index);
 
@@ -129,38 +130,52 @@ static status_t add_element_by_index_in_direction(List* list, int ind_of_current
 }
 
 
-status_t add_next_by_id(List* list, int id, list_data_type data) {
+list_status_t add_after_by_id(List* list, int id, list_data_type data) {
 
     ERROR_(id > list->size, INVALID_ELEM_ID); 
+    ERROR_(is_bad_ptr(list), BAD_PTR);
     
     return add_element_by_index_in_direction(list, get_index_by_id(list, id), data, next);
 }
 
-status_t add_prev_by_id(List* list, int id, list_data_type data) {
+list_status_t add_before_by_id(List* list, int id, list_data_type data) {
 
     ERROR_(id > list->size, INVALID_ELEM_ID); 
+    ERROR_(is_bad_ptr(list), BAD_PTR);
 
     return add_element_by_index_in_direction(list, get_index_by_id(list, id), data, prev);
 }
 
 
 
+list_status_t add_after_by_index(List* list, int index, list_data_type data) {
+    
+    ERROR_(is_bad_ptr(list), BAD_PTR);
+    ERROR_(index >= list->capacity, INVALID_ELEM_INDEX);
 
-status_t add_next_by_index(List* list, int index, list_data_type data) {
 
     return add_element_by_index_in_direction(list, index, data, next);
 }
 
-status_t add_prev_by_index(List* list, int index, list_data_type data) {
+list_status_t add_before_by_index(List* list, int index, list_data_type data) {
+    
+    ERROR_(is_bad_ptr(list), BAD_PTR);
+    ERROR_(index >= list->capacity, INVALID_ELEM_INDEX);
+
 
     return add_element_by_index_in_direction(list, index, data, prev);
 }
 
 
+list_status_t list_resize(List* list);
 
-status_t add_to_tail(List* list, list_data_type data) {
+list_status_t add_to_tail(List* list, list_data_type data) {
     
-    ERROR_(list->size == list->capacity, RUN_OUT_OF_MEMORY);    
+    ERROR_(is_bad_ptr(list), BAD_PTR);
+
+    if (list->size == list->capacity) {
+        list_resize(list);
+    }
 
     int ind_of_data_tail = get_index_by_id(list, list->size);
     int new_element_index = list->head_of_free_elements_index;
@@ -177,9 +192,10 @@ status_t add_to_tail(List* list, list_data_type data) {
 
 
 
-status_t delete_element_by_index(List* list, int ind_of_element) {
+list_status_t delete_element_by_index(List* list, int ind_of_element) {
 
     ERROR_(list->size == 0, NOTHING_TO_DELETE);
+    ERROR_(is_bad_ptr(list), BAD_PTR);
 
 
     list->size--;
@@ -199,9 +215,11 @@ status_t delete_element_by_index(List* list, int ind_of_element) {
     return OK;
 }
 
-status_t delete_element_by_id(List* list, int id) {
+list_status_t delete_element_by_id(List* list, int id) {
     
-    ERROR_(list->size < id, INVALID_ELEM_ID); 
+    ERROR_(list->size < id, INVALID_ELEM_ID);
+    ERROR_(is_bad_ptr(list), BAD_PTR);
+    
 
     return delete_element_by_index(list, get_index_by_id(list, id));
 }
@@ -274,6 +292,20 @@ void list_linearize(List* list) {
     list->is_sorted = true;
 }
 
+
+#define max(x, y) ((x) > (y)) ? (x) : (y)
+const int resize_multiplier = 2;
+list_status_t resize(List* list) {
+
+    ERROR_(is_bad_ptr(list), BAD_PTR);
+
+    list->capacity *= resize_multiplier * list->capacity;
+    buffer = (List_element*) realloc(buffer, list->capacity);
+
+    ERROR_(is_bad_ptr(buffer), REALLOCATION_ERROR);
+
+}
+
 void print_data_by_id(List* list, int id) {
 
     int index = get_index_by_id(list, id);
@@ -321,8 +353,7 @@ void print_graph_parameters(FILE* visualization) {
 	fputs("\t\tedge [ style = invis, dir=both, arrowsize = 0.5 ];\n\n");
 }
 
-
-void list_vis(List* list) {
+void list_visualize(List* list) {
 
     FILE* visualization = fopen("r.gv", "w");
     
@@ -330,11 +361,15 @@ void list_vis(List* list) {
     const char color_of_empty_element[] = "\"#f2d5c7\"";
 
     print_graph_parameters(visualization);
-    fprintf(visualization, "\t\tstruct%d [label=\"{0|<0>}\", style = filled, fillcolor = %s];\n",  0, "\"#f2f1c7\"");
+    fprintf(visualization, "\t\tstruct%d [label=\"0|0\", style = filled, fillcolor = %s];\n",  0, "\"#f2f1c7\"");
     
     for (int i = 1; i < list->capacity; i++) {
-        fprintf(visualization, "\t\tstruct%d [label=\"%d|%d\", style = filled, fillcolor = %s];\n", 
-                i, i, buffer[i].data, buffer[i].is_full ? color_of_full_element : color_of_empty_element);
+        if (buffer[i].is_full) 
+            fprintf(visualization, "\t\tstruct%d [label=\"%d|%d\", style = filled, fillcolor = %s];\n", 
+                    i, i, buffer[i].data, buffer[i].is_full ? color_of_full_element : color_of_empty_element);
+        else 
+        fprintf(visualization, "\t\tstruct%d [label=\"%d| dead_value\", style = filled, fillcolor = %s];\n", 
+                    i, i, buffer[i].is_full ? color_of_full_element : color_of_empty_element);    
     }
 
     int index = 0;
@@ -371,15 +406,14 @@ void list_vis(List* list) {
 
         index = buffer[index].next;
     }
-
-    
-
    
     fputs("}");
 
 
     fclose(visualization);
 }
-#undef fputs
 
+#undef fputs
 #undef buffer
+
+

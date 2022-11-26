@@ -11,7 +11,10 @@ typedef enum {
     RUN_OUT_OF_MEMORY,
     NOTHING_TO_DELETE,
     ALLOCATION_ERROR,
-} status_t;
+    BAD_PTR,
+    INVALID_ELEM_INDEX,
+    REALLOCATION_ERROR,
+} list_status_t;
 typedef struct { //add type!!
     int prev; 
     int next; 
@@ -28,25 +31,27 @@ typedef struct {
     bool is_sorted;
 } List;
 
-status_t list_create(List* list, int capacity);
+list_status_t list_create(List* list, int capacity);
 void list_destruct(List* list);
 
-status_t add_next_by_id(List* list, int id, list_data_type data); 
-status_t add_prev_by_id(List* list, int id, list_data_type data);
-status_t add_to_tail(List* list, list_data_type data); 
+list_status_t add_after_by_id(List* list, int id, list_data_type data); 
+list_status_t add_before_by_id(List* list, int id, list_data_type data);
+list_status_t add_to_tail(List* list, list_data_type data); 
 
-status_t add_next_by_index(List* list, int index, list_data_type data);
-status_t add_prev_by_index(List* list, int index, list_data_type data);
+list_status_t add_after_by_index(List* list, int index, list_data_type data); 
+list_status_t add_before_by_index(List* list, int index, list_data_type data);
 
-status_t delete_element_by_index(List* list, int ind_of_element);
-status_t delete_element_by_id(List* list, int id);
+list_status_t delete_element_by_index(List* list, int ind_of_element);
+list_status_t delete_element_by_id(List* list, int id);
+
 void list_linearize(List* list);
+list_status_t list_resize(List* list);
 
-void list_vis(List* list); // TODO: visualize? ne smotry
+void list_visualize(List* list); 
 
-void print_data_by_id(List* list, int id);
-void print_list_data(List* list);
-void print_array_data(List* list);
-void print_full_information(List* list);
+void print_data_by_id(List* list, int id);  //
+void print_list_data(List* list);           //
+void print_array_data(List* list);          //
+void print_full_information(List* list);    //
 
 
